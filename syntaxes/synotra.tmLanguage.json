@@ -14,7 +14,7 @@
 			"patterns": [
 				{
 					"name": "keyword.control.synotra",
-					"match": "\\b(if|while|for|return)\\b"
+					"match": "\\b(class|actor|io|fun|var|if|else|for|while|return)\\b"
 				}
 			]
 		},
