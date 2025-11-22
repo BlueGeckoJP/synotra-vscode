@@ -16,7 +16,7 @@ vsce package
 
 ## Features
 
-Adds support for the Synotra language
+- Syntax highlighting
 
 ## Requirements
 
