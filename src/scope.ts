@@ -21,15 +21,13 @@ export class ScopeResolver {
 		// Traverse child nodes
 		for (const child of node.children) {
 			if (child.kind === "variable") {
-				// Variables are valid only within their scope
-				if (line >= child.line) {
-					symbols.push({
-						name: child.name,
-						kind: vscode.CompletionItemKind.Variable,
-						line: child.line,
-						node: child,
-					});
-				}
+				// Variables are valid throughout their parent scope
+				symbols.push({
+					name: child.name,
+					kind: vscode.CompletionItemKind.Variable,
+					line: child.line,
+					node: child,
+				});
 			} else if (child.kind === "function") {
 				// Functions are valid throughout their parent scope
 				symbols.push({

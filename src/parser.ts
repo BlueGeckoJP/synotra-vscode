@@ -33,15 +33,39 @@ export class Parser {
 			// Match class definitions
 			const classMatch = line.match(/\bclass\s+([a-zA-Z_][a-zA-Z0-9_]*)/);
 			if (classMatch) {
+				const blockEnd = this.findBlockEnd(i);
 				const classNode: ASTNode = {
 					kind: "class",
 					name: classMatch[1],
 					line: i,
 					startLine: i,
-					endLine: i,
+					endLine: blockEnd,
 					children: [],
 					parent,
 				};
+				this.parseBlockContent(classNode, i + 1, blockEnd);
+				i = blockEnd;
+
+				const classArgumentsMatch = line.match(
+					/(?<=[(,]\s*)[a-zA-Z_][a-zA-Z0-9_]*(?=\s*:)/g,
+				);
+				if (classArgumentsMatch) {
+					const args = classArgumentsMatch[0].split(",");
+					args.forEach((arg) => {
+						const argName = arg.trim();
+						const argNode: ASTNode = {
+							kind: "variable",
+							name: argName,
+							line: i,
+							startLine: i,
+							endLine: i,
+							children: [],
+							parent: classNode,
+						};
+						classNode.children.push(argNode);
+					});
+				}
+
 				parent.children.push(classNode);
 				continue;
 			}
@@ -60,8 +84,32 @@ export class Parser {
 					parent,
 				};
 				this.parseBlockContent(actorNode, i + 1, blockEnd);
-				parent.children.push(actorNode);
 				i = blockEnd;
+
+				const actorArgumentsMatch = line.match(
+					/(?<=[(,]\s*)[a-zA-Z_][a-zA-Z0-9_]*(?=\s*:)/g,
+				);
+				if (actorArgumentsMatch) {
+					console.log(actorArgumentsMatch);
+					const args = actorArgumentsMatch[0].split(",");
+					console.log(args);
+					args.forEach((arg) => {
+						const argName = arg.trim();
+						console.log(argName);
+						const argNode: ASTNode = {
+							kind: "variable",
+							name: argName,
+							line: i,
+							startLine: i,
+							endLine: i,
+							children: [],
+							parent: actorNode,
+						};
+						actorNode.children.push(argNode);
+					});
+				}
+
+				parent.children.push(actorNode);
 			}
 		}
 	}
@@ -88,8 +136,29 @@ export class Parser {
 					parent,
 				};
 				this.parseBlockContent(funNode, i + 1, blockEnd);
-				parent.children.push(funNode);
 				i = blockEnd;
+
+				const funArgumentsMatch = line.match(
+					/(?<=[(,]\s*)[a-zA-Z_][a-zA-Z0-9_]*(?=\s*:)/g,
+				);
+				if (funArgumentsMatch) {
+					const args = funArgumentsMatch[0].split(",");
+					args.forEach((arg) => {
+						const argName = arg.trim();
+						const argNode: ASTNode = {
+							kind: "variable",
+							name: argName,
+							line: i,
+							startLine: i,
+							endLine: i,
+							children: [],
+							parent: funNode,
+						};
+						funNode.children.push(argNode);
+					});
+				}
+
+				parent.children.push(funNode);
 				continue;
 			}
 
