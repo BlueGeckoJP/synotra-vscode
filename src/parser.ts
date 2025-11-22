@@ -1,5 +1,7 @@
 import type { ASTNode } from "./ast";
 
+const ARGUMENT_REGEX = /(?<=[(,]\s*)[a-zA-Z_][a-zA-Z0-9_]*(?=\s*:)/g;
+
 export class Parser {
 	private lines: string[];
 
@@ -46,9 +48,7 @@ export class Parser {
 				this.parseBlockContent(classNode, i + 1, blockEnd);
 				i = blockEnd;
 
-				const classArgumentsMatch = line.match(
-					/(?<=[(,]\s*)[a-zA-Z_][a-zA-Z0-9_]*(?=\s*:)/g,
-				);
+				const classArgumentsMatch = line.match(ARGUMENT_REGEX);
 				if (classArgumentsMatch) {
 					const args = classArgumentsMatch[0].split(",");
 					args.forEach((arg) => {
@@ -86,9 +86,7 @@ export class Parser {
 				this.parseBlockContent(actorNode, i + 1, blockEnd);
 				i = blockEnd;
 
-				const actorArgumentsMatch = line.match(
-					/(?<=[(,]\s*)[a-zA-Z_][a-zA-Z0-9_]*(?=\s*:)/g,
-				);
+				const actorArgumentsMatch = line.match(ARGUMENT_REGEX);
 				if (actorArgumentsMatch) {
 					console.log(actorArgumentsMatch);
 					const args = actorArgumentsMatch[0].split(",");
@@ -138,9 +136,7 @@ export class Parser {
 				this.parseBlockContent(funNode, i + 1, blockEnd);
 				i = blockEnd;
 
-				const funArgumentsMatch = line.match(
-					/(?<=[(,]\s*)[a-zA-Z_][a-zA-Z0-9_]*(?=\s*:)/g,
-				);
+				const funArgumentsMatch = line.match(ARGUMENT_REGEX);
 				if (funArgumentsMatch) {
 					const args = funArgumentsMatch[0].split(",");
 					args.forEach((arg) => {
