@@ -1,6 +1,7 @@
 node_modules
 *.vsix
 .env
+/dist
 
 /test.sy
 /test.syi
