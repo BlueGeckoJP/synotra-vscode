@@ -88,12 +88,9 @@ export class Parser {
 
 				const actorArgumentsMatch = line.match(ARGUMENT_REGEX);
 				if (actorArgumentsMatch) {
-					console.log(actorArgumentsMatch);
 					const args = actorArgumentsMatch[0].split(",");
-					console.log(args);
 					args.forEach((arg) => {
 						const argName = arg.trim();
-						console.log(argName);
 						const argNode: ASTNode = {
 							kind: "variable",
 							name: argName,
