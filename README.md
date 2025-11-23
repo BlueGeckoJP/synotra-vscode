@@ -21,6 +21,7 @@ vsce package
 ## Features
 
 - Syntax highlighting
+- Auto completion
 
 ## Requirements
 
