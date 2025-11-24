@@ -250,35 +250,143 @@ export class InferenceEngine {
 		return a;
 	}
 
-	// TODO: It should be modified to accommodate calculations involving three or more elements
 	private scanBinaryOps(lines: string[]) {
-		// Very simple: if we detect `a + b` where both operands numeric literals or numeric vars, infer Int
-		const binRegex =
-			/([a-zA-Z_][a-zA-Z0-9_]*|\d+)\s*([+\-*/])\s*([a-zA-Z_][a-zA-Z0-9_]*|\d+)/;
 		for (const raw of lines) {
 			const line = raw.trim();
-			const m = line.match(binRegex);
-			if (!m) {
+
+			// Check if this line is a variable assignment
+			const assignMatch = line.match(
+				/\b(?:var|val)\s+([a-zA-Z_][a-zA-Z0-9_]*)\s*=\s*(.+)/,
+			);
+			if (!assignMatch) {
 				continue;
 			}
-			const left = m[1];
-			const right = m[3];
-			const leftType = /^\d+$/.test(left)
-				? make("Int")
-				: (this.types.get(left) ?? make("Unknown"));
-			const rightType = /^\d+$/.test(right)
-				? make("Int")
-				: (this.types.get(right) ?? make("Unknown"));
-			if (leftType.kind === "Int" && rightType.kind === "Int") {
-				// find variable being assigned to, e.g. var x = a + b
-				const assignMatch = line.match(
-					/\b(?:var|val)\s+([a-zA-Z_][a-zA-Z0-9_]*)\s*=\s*.+/,
-				);
-				if (assignMatch) {
-					const name = assignMatch[1];
-					this.types.set(name, make("Int"));
-				}
+
+			const varName = assignMatch[1];
+			const expr = assignMatch[2].trim();
+
+			// Check if expression contains binary operators
+			if (!/[+\-*/]/.test(expr)) {
+				continue;
+			}
+
+			// Infer the type of the entire expression
+			const resultType = this.inferBinaryExpressionType(expr);
+			if (resultType) {
+				this.types.set(varName, resultType);
 			}
 		}
+	}
+
+	private inferBinaryExpressionType(expr: string): TypeInfo | null {
+		// Tokenize the expression into operands and operators
+		const tokens = this.tokenizeExpression(expr);
+		if (tokens.length === 0) {
+			return null;
+		}
+
+		// If single token, infer its type directly
+		if (tokens.length === 1) {
+			return this.inferOperandType(tokens[0]);
+		}
+
+		// Process left to right: accumulate result type through operators
+		let resultType = this.inferOperandType(tokens[0]);
+
+		for (let i = 1; i < tokens.length; i += 2) {
+			if (i + 1 >= tokens.length) {
+				break; // incomplete expression
+			}
+
+			const operator = tokens[i];
+			const rightOperand = tokens[i + 1];
+			const rightType = this.inferOperandType(rightOperand);
+
+			// Apply type rules for binary operation
+			resultType = this.inferBinaryOperationType(
+				resultType,
+				operator,
+				rightType,
+			);
+
+			// If result becomes Unknown, no need to continue
+			if (resultType.kind === "Unknown") {
+				return resultType;
+			}
+		}
+
+		return resultType;
+	}
+
+	private tokenizeExpression(expr: string): string[] {
+		// Split by operators while preserving them
+		const tokens: string[] = [];
+		let current = "";
+
+		for (let i = 0; i < expr.length; i++) {
+			const ch = expr[i];
+			if (ch === "+" || ch === "-" || ch === "*" || ch === "/") {
+				if (current.trim()) {
+					tokens.push(current.trim());
+				}
+				tokens.push(ch);
+				current = "";
+			} else {
+				current += ch;
+			}
+		}
+
+		if (current.trim()) {
+			tokens.push(current.trim());
+		}
+
+		return tokens;
+	}
+
+	private inferOperandType(operand: string): TypeInfo {
+		// Check if it's a numeric literal
+		if (/^\d+(\.\d+)?$/.test(operand)) {
+			return make("Int");
+		}
+
+		// Check if it's a string literal
+		if (/^".*"$/.test(operand)) {
+			return make("String");
+		}
+
+		// Check if it's a boolean literal
+		if (/^(true|false)$/.test(operand)) {
+			return make("Bool");
+		}
+
+		// Otherwise, look it up in the types map
+		return this.types.get(operand) ?? make("Unknown");
+	}
+
+	private inferBinaryOperationType(
+		leftType: TypeInfo,
+		operator: string,
+		rightType: TypeInfo,
+	): TypeInfo {
+		// Different types always return Unknown
+		if (leftType.kind !== rightType.kind) {
+			return make("Unknown");
+		}
+
+		// Int: supports all four operations (+, -, *, /)
+		if (leftType.kind === "Int") {
+			return make("Int");
+		}
+
+		// String: only supports addition (+)
+		if (leftType.kind === "String") {
+			if (operator === "+") {
+				return make("String");
+			}
+			return make("Unknown");
+		}
+
+		// All other types return Unknown
+		return make("Unknown");
 	}
 }
