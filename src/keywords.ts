@@ -97,4 +97,14 @@ export const KEYWORDS: KeywordDefinition[] = [
 		kind: vscode.CompletionItemKind.Class,
 		detail: "Defines a MutableSet collection.",
 	},
+	{
+		label: "true",
+		kind: vscode.CompletionItemKind.Constant,
+		detail: "Boolean true value.",
+	},
+	{
+		label: "false",
+		kind: vscode.CompletionItemKind.Constant,
+		detail: "Boolean false value.",
+	},
 ];

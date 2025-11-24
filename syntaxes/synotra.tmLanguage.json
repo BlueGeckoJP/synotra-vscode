@@ -25,6 +25,9 @@
 		},
 		{
 			"include": "#operators"
+		},
+		{
+			"include": "#constants"
 		}
 	],
 	"repository": {
@@ -84,6 +87,10 @@
 		"operators": {
 			"name": "keyword.operator.synotra",
 			"match": "(\\+|-|\\*|/|=|==|!=|<=|>=|<|>)"
+		},
+		"constants": {
+			"name": "constant.language.synotra",
+			"match": "\\b(true|false)\\b"
 		}
 	},
 	"scopeName": "source.synotra"
