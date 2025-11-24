@@ -1,5 +1,6 @@
 import * as vscode from "vscode";
-import { InferenceEngine, typeToString } from "./inference";
+import type { ASTNode } from "./ast";
+import { InferenceEngine, type TypeInfo, typeToString } from "./inference";
 import { Parser } from "./parser";
 import { ScopeResolver } from "./scope";
 
@@ -9,8 +10,8 @@ export default class SynotraHoverProvider implements vscode.HoverProvider {
 	private cached: {
 		uri: string;
 		version: number;
-		ast: any;
-		types: Map<string, any>;
+		ast: ASTNode;
+		types: Map<string, TypeInfo>;
 	} | null = null;
 
 	provideHover(
@@ -38,7 +39,7 @@ export default class SynotraHoverProvider implements vscode.HoverProvider {
 			const types = this.engine.inferFromText(document.getText(), ast);
 			this.cached = { uri, version: currentVersion, ast, types };
 		}
-		const inferred = this.cached!.types.get(word);
+		const inferred = this.cached.types.get(word);
 		if (inferred) {
 			const md = new vscode.MarkdownString();
 			md.appendCodeblock(typeToString(inferred), "text");

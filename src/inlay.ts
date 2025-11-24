@@ -6,7 +6,7 @@ export default class SynotraInlayProvider implements vscode.InlayHintsProvider {
 
 	provideInlayHints(
 		document: vscode.TextDocument,
-		range: vscode.Range,
+		_range: vscode.Range,
 		_token: vscode.CancellationToken,
 	): vscode.ProviderResult<vscode.InlayHint[]> {
 		const text = document.getText();

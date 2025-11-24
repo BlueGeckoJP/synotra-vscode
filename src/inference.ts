@@ -9,7 +9,7 @@ export type TypeKind =
 	| "Set"
 	| "Function"
 	| "Custom"
-	| "RandomAny";
+	| "Unknown";
 
 export interface TypeInfo {
 	kind: TypeKind;
@@ -27,7 +27,7 @@ function make(
 
 export function typeToString(t?: TypeInfo): string {
 	if (!t) {
-		return "RandomAny";
+		return "Unknown";
 	}
 	if (!t.generics || t.generics.length === 0) {
 		return t.readonlyName ?? t.kind;
@@ -57,7 +57,7 @@ export class InferenceEngine {
 			const node = stack.pop()!;
 			if (node.kind === "variable") {
 				if (!this.types.has(node.name)) {
-					this.types.set(node.name, make("RandomAny"));
+					this.types.set(node.name, make("Unknown"));
 				}
 			}
 			for (const c of node.children) {
@@ -100,26 +100,26 @@ export class InferenceEngine {
 			/^\s*List(\s*<.*>)?\.new\s*\(/.test(expr) ||
 			/^\s*List\.new\s*\(/.test(expr)
 		) {
-			return make("List", [make("RandomAny")]);
+			return make("List", [make("Unknown")]);
 		}
 		if (
 			/^\s*MutableMap(\s*<.*>)?\.new\s*\(/.test(expr) ||
 			/^\s*MutableMap\.new\s*\(/.test(expr)
 		) {
-			return make("Map", [make("RandomAny"), make("RandomAny")]);
+			return make("Map", [make("Unknown"), make("Unknown")]);
 		}
 		if (
 			/^\s*MutableSet(\s*<.*>)?\.new\s*\(/.test(expr) ||
 			/^\s*MutableSet\.new\s*\(/.test(expr)
 		) {
-			return make("Set", [make("RandomAny")]);
+			return make("Set", [make("Unknown")]);
 		}
 		// Function call or identifier -> unknown/custom
 		if (/^[a-zA-Z_][a-zA-Z0-9_]*\(.*\)$/.test(expr)) {
-			return make("RandomAny");
+			return make("Unknown");
 		}
-		// Fallback: RandomAny
-		return make("RandomAny");
+		// Fallback: Unknown
+		return make("Unknown");
 	}
 
 	private scanCollectionUsages(lines: string[]) {
@@ -151,15 +151,14 @@ export class InferenceEngine {
 
 	private mergeListElementType(listName: string, elemType: TypeInfo) {
 		const existing = this.types.get(listName);
-		if (!existing || existing.kind === "RandomAny") {
+		if (!existing || existing.kind === "Unknown") {
 			this.types.set(listName, make("List", [elemType]));
 			return;
 		}
 		if (existing.kind === "List") {
-			const cur =
-				existing.generics && existing.generics[0]
-					? existing.generics[0]
-					: make("RandomAny");
+			const cur = existing.generics?.[0]
+				? existing.generics[0]
+				: make("Unknown");
 			const merged = this.mergeTypes(cur, elemType);
 			this.types.set(listName, make("List", [merged]));
 			return;
@@ -169,19 +168,17 @@ export class InferenceEngine {
 
 	private mergeMapTypes(mapName: string, keyType: TypeInfo, valType: TypeInfo) {
 		const existing = this.types.get(mapName);
-		if (!existing || existing.kind === "RandomAny") {
+		if (!existing || existing.kind === "Unknown") {
 			this.types.set(mapName, make("Map", [keyType, valType]));
 			return;
 		}
 		if (existing.kind === "Map") {
-			const curKey =
-				existing.generics && existing.generics[0]
-					? existing.generics[0]
-					: make("RandomAny");
-			const curVal =
-				existing.generics && existing.generics[1]
-					? existing.generics[1]
-					: make("RandomAny");
+			const curKey = existing.generics?.[0]
+				? existing.generics[0]
+				: make("Unknown");
+			const curVal = existing.generics?.[1]
+				? existing.generics[1]
+				: make("Unknown");
 			const mergedKey = this.mergeTypes(curKey, keyType);
 			const mergedVal = this.mergeTypes(curVal, valType);
 			this.types.set(mapName, make("Map", [mergedKey, mergedVal]));
@@ -190,7 +187,7 @@ export class InferenceEngine {
 	}
 
 	private mergeTypes(a: TypeInfo, b: TypeInfo): TypeInfo {
-		// Simple merge: if same kind return that, otherwise RandomAny or Custom
+		// Simple merge: if same kind return that, otherwise Unknown or Custom
 		if (a.kind === b.kind) {
 			// Merge generics recursively if present
 			if (a.generics && b.generics && a.generics.length === b.generics.length) {
@@ -201,11 +198,11 @@ export class InferenceEngine {
 			}
 			return a;
 		}
-		// If one is RandomAny return the other
-		if (a.kind === "RandomAny") {
+		// If one is Unknown return the other
+		if (a.kind === "Unknown") {
 			return b;
 		}
-		if (b.kind === "RandomAny") {
+		if (b.kind === "Unknown") {
 			return a;
 		}
 		// Otherwise fallback to Custom with combined name
@@ -226,10 +223,10 @@ export class InferenceEngine {
 			const right = m[3];
 			const leftType = /^\d+$/.test(left)
 				? make("Int")
-				: (this.types.get(left) ?? make("RandomAny"));
+				: (this.types.get(left) ?? make("Unknown"));
 			const rightType = /^\d+$/.test(right)
 				? make("Int")
-				: (this.types.get(right) ?? make("RandomAny"));
+				: (this.types.get(right) ?? make("Unknown"));
 			if (leftType.kind === "Int" && rightType.kind === "Int") {
 				// find variable being assigned to, e.g. var x = a + b
 				const assignMatch = line.match(
