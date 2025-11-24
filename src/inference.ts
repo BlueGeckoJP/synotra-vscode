@@ -94,7 +94,7 @@ export class InferenceEngine {
 			return make("Bool");
 		}
 		// Numeric literal (integer or float) -> Int for simplicity
-		if (/^\d+(\.\d+)?$/.test(expr)) {
+		if (/^\+?-?\d+(\.\d+)?$/.test(expr)) {
 			return make("Int");
 		}
 		// List/Map/Set construction
@@ -326,6 +326,26 @@ export class InferenceEngine {
 		for (let i = 0; i < expr.length; i++) {
 			const ch = expr[i];
 			if (ch === "+" || ch === "-" || ch === "*" || ch === "/") {
+				const lastToken = tokens[tokens.length - 1];
+				if (
+					(ch === "+" || ch === "-") &&
+					tokens.length === 0 &&
+					current === ""
+				) {
+					current += ch;
+					continue;
+				}
+				if (
+					(ch === "+" || ch === "-") &&
+					(lastToken === "+" ||
+						lastToken === "-" ||
+						lastToken === "*" ||
+						lastToken === "/") &&
+					current.trim() === ""
+				) {
+					current += ch;
+					continue;
+				}
 				if (current.trim()) {
 					tokens.push(current.trim());
 				}
@@ -345,7 +365,7 @@ export class InferenceEngine {
 
 	private inferOperandType(operand: string): TypeInfo {
 		// Check if it's a numeric literal
-		if (/^\d+(\.\d+)?$/.test(operand)) {
+		if (/^\+?-?\d+(\.\d+)?$/.test(operand)) {
 			return make("Int");
 		}
 
