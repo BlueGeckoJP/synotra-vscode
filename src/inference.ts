@@ -54,7 +54,10 @@ export class InferenceEngine {
 	private collectDeclarationsFromAST(ast: ASTNode) {
 		const stack: ASTNode[] = [ast];
 		while (stack.length) {
-			const node = stack.pop()!;
+			const node = stack.pop();
+			if (!node) {
+				continue;
+			}
 			if (node.kind === "variable") {
 				if (!this.types.has(node.name)) {
 					this.types.set(node.name, make("Unknown"));
@@ -75,8 +78,7 @@ export class InferenceEngine {
 				continue;
 			}
 			const name = m[1];
-			let rhs = m[2].trim();
-			rhs = rhs.replace(/;$/, "");
+			const rhs = m[2].trim();
 			const inferred = this.inferExpressionType(rhs);
 			this.types.set(name, inferred);
 		}
@@ -84,7 +86,7 @@ export class InferenceEngine {
 
 	private inferExpressionType(expr: string): TypeInfo {
 		// String literal
-		if (/^".*"$/.test(expr) || /^'.*'$/.test(expr)) {
+		if (/^".*"$/.test(expr)) {
 			return make("String");
 		}
 		// Boolean literal
@@ -96,18 +98,21 @@ export class InferenceEngine {
 			return make("Int");
 		}
 		// List/Map/Set construction
+		// FIXME: When List.new is invoked, if a type is passed, the type must be set from the outset
 		if (
 			/^\s*List(\s*<.*>)?\.new\s*\(/.test(expr) ||
 			/^\s*List\.new\s*\(/.test(expr)
 		) {
 			return make("List", [make("Unknown")]);
 		}
+		// FIXME: When Map.new is invoked, if types are passed, the types must be set from the outset
 		if (
 			/^\s*MutableMap(\s*<.*>)?\.new\s*\(/.test(expr) ||
 			/^\s*MutableMap\.new\s*\(/.test(expr)
 		) {
 			return make("Map", [make("Unknown"), make("Unknown")]);
 		}
+		// FIXME: When Set.new is invoked, if a type is passed, the type must be set from the outset
 		if (
 			/^\s*MutableSet(\s*<.*>)?\.new\s*\(/.test(expr) ||
 			/^\s*MutableSet\.new\s*\(/.test(expr)
@@ -124,10 +129,11 @@ export class InferenceEngine {
 
 	private scanCollectionUsages(lines: string[]) {
 		// list.add(10) -> infer list as List<Int>
+		// map.put("key", 20) -> infer map as Map<String, Int>
+		// set.add("value") -> infer set as Set<String>
 		const addRegex = /([a-zA-Z_][a-zA-Z0-9_]*)\.add\s*\(\s*(.+?)\s*\)/;
 		const putRegex =
 			/([a-zA-Z_][a-zA-Z0-9_]*)\.put\s*\(\s*(.+?)\s*,\s*(.+?)\s*\)/;
-		const getRegex = /([a-zA-Z_][a-zA-Z0-9_]*)\.get\s*\(\s*(.+?)\s*\)/;
 		for (const raw of lines) {
 			const line = raw.trim();
 			let m = line.match(addRegex);
@@ -149,6 +155,7 @@ export class InferenceEngine {
 		}
 	}
 
+	// FIXME: No type merging; generally follows the type inferred initially via add or similar operations
 	private mergeListElementType(listName: string, elemType: TypeInfo) {
 		const existing = this.types.get(listName);
 		if (!existing || existing.kind === "Unknown") {
@@ -166,6 +173,7 @@ export class InferenceEngine {
 		// If existing is not a List, leave it unchanged
 	}
 
+	// FIXME: No type merging; generally follows the type inferred initially via add or similar operations
 	private mergeMapTypes(mapName: string, keyType: TypeInfo, valType: TypeInfo) {
 		const existing = this.types.get(mapName);
 		if (!existing || existing.kind === "Unknown") {
@@ -191,9 +199,12 @@ export class InferenceEngine {
 		if (a.kind === b.kind) {
 			// Merge generics recursively if present
 			if (a.generics && b.generics && a.generics.length === b.generics.length) {
-				const gens = a.generics.map((g, i) =>
-					this.mergeTypes(g, b.generics![i]),
-				);
+				const gens = a.generics.map((g, i) => {
+					if (!b.generics) {
+						return g;
+					}
+					return this.mergeTypes(g, b.generics[i]);
+				});
 				return make(a.kind, gens);
 			}
 			return a;
@@ -206,9 +217,11 @@ export class InferenceEngine {
 			return a;
 		}
 		// Otherwise fallback to Custom with combined name
+		// FIXME: No type merging; generally follows the type inferred initially via add or similar operations
 		return make("Custom", undefined, `${a.kind}|${b.kind}`);
 	}
 
+	// TODO: It should be modified to accommodate calculations involving three or more elements
 	private scanBinaryOps(lines: string[]) {
 		// Very simple: if we detect `a + b` where both operands numeric literals or numeric vars, infer Int
 		const binRegex =
