@@ -46,9 +46,8 @@ export class Parser {
 					parent,
 				};
 				this.parseBlockContent(classNode, i + 1, blockEnd);
-				i = blockEnd;
-
 				this.parseArguments(line, classNode, i);
+				i = blockEnd;
 
 				parent.children.push(classNode);
 				continue;
@@ -68,9 +67,8 @@ export class Parser {
 					parent,
 				};
 				this.parseBlockContent(actorNode, i + 1, blockEnd);
-				i = blockEnd;
-
 				this.parseArguments(line, actorNode, i);
+				i = blockEnd;
 
 				parent.children.push(actorNode);
 			}
@@ -99,9 +97,8 @@ export class Parser {
 					parent,
 				};
 				this.parseBlockContent(funNode, i + 1, blockEnd);
-				i = blockEnd;
-
 				this.parseArguments(line, funNode, i);
+				i = blockEnd;
 
 				parent.children.push(funNode);
 				continue;
@@ -147,7 +144,11 @@ export class Parser {
 		}
 	}
 
-	private parseArguments(line: string, parentNode: ASTNode, lineNumber: number): void {
+	private parseArguments(
+		line: string,
+		parentNode: ASTNode,
+		lineNumber: number,
+	): void {
 		const argumentsMatch = line.match(ARGUMENT_REGEX);
 		if (argumentsMatch) {
 			const args = argumentsMatch[0].split(",");
