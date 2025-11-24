@@ -2,7 +2,7 @@
 
 synotra-vscode adds the Synotra language support to VSCode
 
-<https://github.com/Kakeru3/synotra>
+[Synotra language](https://github.com/Kakeru3/synotra)
 
 ## How to use
 
