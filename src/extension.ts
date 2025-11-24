@@ -2,8 +2,8 @@
 // Import the module and reference it with the alias vscode in your code below
 import * as vscode from "vscode";
 import Completion from "./completion";
-import SynotraHoverProvider from "./hover";
-import SynotraInlayProvider from "./inlay";
+import Hover from "./hover";
+import Inlay from "./inlay";
 
 // This method is called when your extension is activated
 // Your extension is activated the very first time the command is executed
@@ -16,15 +16,12 @@ export function activate(context: vscode.ExtensionContext) {
 	);
 	context.subscriptions.push(completionProvider);
 
-	const hover = vscode.languages.registerHoverProvider(
-		"synotra",
-		new SynotraHoverProvider(),
-	);
+	const hover = vscode.languages.registerHoverProvider("synotra", new Hover());
 	context.subscriptions.push(hover);
 
 	const inlay = vscode.languages.registerInlayHintsProvider(
 		"synotra",
-		new SynotraInlayProvider(),
+		new Inlay(),
 	);
 	context.subscriptions.push(inlay);
 }

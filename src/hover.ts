@@ -2,11 +2,9 @@ import * as vscode from "vscode";
 import type { ASTNode } from "./ast";
 import { InferenceEngine, type TypeInfo, typeToString } from "./inference";
 import { Parser } from "./parser";
-import { ScopeResolver } from "./scope";
 
-export default class SynotraHoverProvider implements vscode.HoverProvider {
+export default class Hover implements vscode.HoverProvider {
 	private engine = new InferenceEngine();
-	private resolver = new ScopeResolver();
 	private cached: {
 		uri: string;
 		version: number;

@@ -1,7 +1,7 @@
 import * as vscode from "vscode";
 import { InferenceEngine, typeToString } from "./inference";
 
-export default class SynotraInlayProvider implements vscode.InlayHintsProvider {
+export default class Inlay implements vscode.InlayHintsProvider {
 	private engine = new InferenceEngine();
 
 	provideInlayHints(

@@ -44,7 +44,7 @@ export default class Completion implements vscode.CompletionItemProvider {
 			const inferred = types.get(sym.name);
 			item.detail =
 				`Defined at line ${sym.line + 1}` +
-				(inferred ? ` — ${typeToString(inferred)}` : "");
+				(inferred ? ` - ${typeToString(inferred)}` : "");
 			// Prioritize symbols with known types
 			item.sortText = inferred ? "0" : "1";
 			items.push(item);
