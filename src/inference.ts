@@ -98,21 +98,40 @@ export class InferenceEngine {
 			return make("Int");
 		}
 		// List/Map/Set construction
-		// FIXME: When List.new is invoked, if a type is passed, the type must be set from the outset
+		// Extract generic type from List<T>.new(...)
+		let match = expr.match(/^\s*List\s*<([^>]+)>\s*\.new\s*\(/);
+		if (match?.[1]) {
+			const typeParam = match[1].trim();
+			return make("List", [this.parseTypeParam(typeParam)]);
+		}
 		if (
 			/^\s*List(\s*<.*>)?\.new\s*\(/.test(expr) ||
 			/^\s*List\.new\s*\(/.test(expr)
 		) {
 			return make("List", [make("Unknown")]);
 		}
-		// FIXME: When Map.new is invoked, if types are passed, the types must be set from the outset
+		// Extract generic types from Map<K, V>.new(...)
+		match = expr.match(/^\s*MutableMap\s*<([^,]+)\s*,\s*([^>]+)>\s*\.new\s*\(/);
+		if (match?.[1] && match[2]) {
+			const keyType = match[1].trim();
+			const valType = match[2].trim();
+			return make("Map", [
+				this.parseTypeParam(keyType),
+				this.parseTypeParam(valType),
+			]);
+		}
 		if (
 			/^\s*MutableMap(\s*<.*>)?\.new\s*\(/.test(expr) ||
 			/^\s*MutableMap\.new\s*\(/.test(expr)
 		) {
 			return make("Map", [make("Unknown"), make("Unknown")]);
 		}
-		// FIXME: When Set.new is invoked, if a type is passed, the type must be set from the outset
+		// Extract generic type from Set<T>.new(...)
+		match = expr.match(/^\s*MutableSet\s*<([^>]+)>\s*\.new\s*\(/);
+		if (match?.[1]) {
+			const typeParam = match[1].trim();
+			return make("Set", [this.parseTypeParam(typeParam)]);
+		}
 		if (
 			/^\s*MutableSet(\s*<.*>)?\.new\s*\(/.test(expr) ||
 			/^\s*MutableSet\.new\s*\(/.test(expr)
@@ -125,6 +144,20 @@ export class InferenceEngine {
 		}
 		// Fallback: Unknown
 		return make("Unknown");
+	}
+
+	private parseTypeParam(typeStr: string): TypeInfo {
+		const trimmed = typeStr.trim();
+		switch (trimmed) {
+			case "Int":
+				return make("Int");
+			case "String":
+				return make("String");
+			case "Bool":
+				return make("Bool");
+			default:
+				return make("Unknown");
+		}
 	}
 
 	private scanCollectionUsages(lines: string[]) {
