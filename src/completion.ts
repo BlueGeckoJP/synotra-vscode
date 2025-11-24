@@ -1,5 +1,6 @@
 import * as vscode from "vscode";
 import type { ASTNode } from "./ast";
+import { InferenceEngine, typeToString } from "./inference";
 import { KEYWORDS } from "./keywords";
 import { Parser } from "./parser";
 import { ScopeResolver } from "./scope";
@@ -8,6 +9,7 @@ export default class Completion implements vscode.CompletionItemProvider {
 	private resolver = new ScopeResolver();
 	private cachedAST: { ast: ASTNode; version: number; uri: string } | null =
 		null;
+	private engine = new InferenceEngine();
 
 	public provideCompletionItems(
 		document: vscode.TextDocument,
@@ -19,21 +21,32 @@ export default class Completion implements vscode.CompletionItemProvider {
 	> {
 		const items: vscode.CompletionItem[] = [];
 
-		// Add keywords
-		KEYWORDS.forEach((kw) => {
-			const item = new vscode.CompletionItem(kw.label, kw.kind);
-			item.detail = kw.detail;
-			items.push(item);
-		});
+		const text = document.getText();
 
 		// Parse document into AST (with caching)
 		const ast = this.getOrParseAST(document);
 
-		// Get symbols visible at cursor position
+		// Run lightweight inference
+		const types = this.engine.inferFromText(text, ast);
+
+		// Add keywords (keep lower priority than local symbols)
+		KEYWORDS.forEach((kw) => {
+			const item = new vscode.CompletionItem(kw.label, kw.kind);
+			item.detail = kw.detail;
+			item.sortText = "2";
+			items.push(item);
+		});
+
+		// Get symbols visible at cursor position and attach inferred types
 		const visibleSymbols = this.resolver.getSymbolsAtLine(ast, position.line);
 		visibleSymbols.forEach((sym) => {
 			const item = new vscode.CompletionItem(sym.name, sym.kind);
-			item.detail = `Defined at line ${sym.line + 1}`;
+			const inferred = types.get(sym.name);
+			item.detail =
+				`Defined at line ${sym.line + 1}` +
+				(inferred ? ` — ${typeToString(inferred)}` : "");
+			// Prioritize symbols with known types
+			item.sortText = inferred ? "0" : "1";
 			items.push(item);
 		});
 
