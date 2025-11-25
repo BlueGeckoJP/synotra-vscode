@@ -327,22 +327,18 @@ export class InferenceEngine {
 			const ch = expr[i];
 			if (ch === "+" || ch === "-" || ch === "*" || ch === "/") {
 				const lastToken = tokens[tokens.length - 1];
-				if (
+				const isUnaryAtStart =
 					(ch === "+" || ch === "-") &&
 					tokens.length === 0 &&
-					current === ""
-				) {
-					current += ch;
-					continue;
-				}
-				if (
+					current.trim() === "";
+				const isUnaryAfterOperator =
 					(ch === "+" || ch === "-") &&
 					(lastToken === "+" ||
 						lastToken === "-" ||
 						lastToken === "*" ||
 						lastToken === "/") &&
-					current.trim() === ""
-				) {
+					current.trim() === "";
+				if (isUnaryAtStart || isUnaryAfterOperator) {
 					current += ch;
 					continue;
 				}
