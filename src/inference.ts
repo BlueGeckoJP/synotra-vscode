@@ -223,6 +223,8 @@ export class InferenceEngine {
 			this.types.set(mapName, make("MutableMap", [mergedKey, mergedVal]));
 			return;
 		}
+		// If existing is not a MutableMap or Unknown, leave it unchanged but return explicitly for clarity
+		return;
 	}
 
 	private mergeTypes(a: TypeInfo, b: TypeInfo): TypeInfo {
