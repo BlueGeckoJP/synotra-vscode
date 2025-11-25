@@ -34,7 +34,12 @@ export default class Inlay implements vscode.InlayHintsProvider {
 				label,
 				vscode.InlayHintKind.Type,
 			);
+			// [nitpick] Setting paddingLeft = true without paddingRight may cause inconsistent spacing.
+			// The hint shows : Type immediately after the variable name with a space before the colon but none after.
+			// For better readability, consider also setting paddingRight = false (or omitting it if it defaults to false) to make the spacing intention explicit, or adjust the label format.
+			// Suggested by GitHub Copilot
 			hint.paddingLeft = true;
+			hint.paddingRight = false;
 			hints.push(hint);
 		}
 
