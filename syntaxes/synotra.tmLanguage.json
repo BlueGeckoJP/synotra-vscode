@@ -70,7 +70,7 @@
 		},
 		"numbers": {
 			"name": "constant.numeric.synotra",
-			"match": "\\b\\d+(\\.\\d+)?\\b"
+			"match": "[+-]?\\b\\d+(\\.\\d+)?\\b"
 		},
 		"functions": {
 			"name": "entity.name.function.synotra",
