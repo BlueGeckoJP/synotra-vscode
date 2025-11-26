@@ -32,9 +32,11 @@ export default class Completion implements vscode.CompletionItemProvider {
 		// Get symbols visible at cursor position
 		const visibleSymbols = this.resolver.getSymbolsAtLine(ast, position.line);
 		visibleSymbols.forEach((sym) => {
-			const item = new vscode.CompletionItem(sym.name, sym.kind);
-			item.detail = `Defined at line ${sym.line + 1}`;
-			items.push(item);
+			if (position.line !== sym.line) {
+				const item = new vscode.CompletionItem(sym.name, sym.kind);
+				item.detail = `Defined at line ${sym.line + 1}`;
+				items.push(item);
+			}
 		});
 
 		return items;
