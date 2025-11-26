@@ -14,7 +14,7 @@ export default class Inlay implements vscode.InlayHintsProvider {
 		const lines = text.split(/\r?\n/);
 		const hints: vscode.InlayHint[] = [];
 
-		const initRegex = /^\s*(?:var|val)\s+([a-zA-Z_][a-zA-Z0-9_]*)\s*(?:=|:|\b)/;
+		const initRegex = /^\s*(?:var|val)\s+([a-zA-Z_][a-zA-Z0-9_]*)\s*(?:=|:)/;
 
 		// Get inferred types from shared service
 		const { types } = this.inferenceService.getInferenceResult(document);
