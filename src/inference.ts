@@ -139,9 +139,12 @@ export class InferenceEngine {
 			}
 		}
 
-		// Function call or identifier -> unknown/custom
-		if (/^[a-zA-Z_][a-zA-Z0-9_]*\(.*\)$/.test(expr)) {
-			return make("Unknown");
+		// Function call or identifier
+		if (/^[a-zA-Z_][a-zA-Z0-9_]*(\(.*\))?$/.test(expr)) {
+			const existingType = this.types.get(expr);
+			if (existingType) {
+				return existingType;
+			}
 		}
 		// Fallback: Unknown
 		return make("Unknown");
