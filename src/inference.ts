@@ -287,7 +287,7 @@ export class InferenceEngine {
 		const methodMatch = line.match(
 			/([a-zA-Z_][a-zA-Z0-9_]*)\.([a-zA-Z_][a-zA-Z0-9_]*)\s*\(/,
 		);
-		if (!methodMatch?.index) {
+		if (methodMatch?.index === undefined || !methodMatch) {
 			return null;
 		}
 
