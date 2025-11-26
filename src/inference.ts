@@ -70,17 +70,32 @@ export class InferenceEngine {
 	}
 
 	private scanInitializers(lines: string[]) {
-		const initRegex = /\b(?:var|val)\s+([a-zA-Z_][a-zA-Z0-9_]*)\s*=\s*(.+)$/;
+		// Match groups:
+		// 1: variable name, required
+		// 2: type annotation, optional (string | undefined)
+		// 3: right-hand side expression, required
+		const initRegex =
+			/\b(?:var|val)\s+([a-zA-Z_][a-zA-Z0-9_]*)\s*(?::\s*(.+?))?\s*=\s*(.+)$/;
+		console.log(lines);
 		for (const raw of lines) {
 			const line = raw.trim();
 			const m = line.match(initRegex);
 			if (!m) {
 				continue;
 			}
+
 			const name = m[1];
-			const rhs = m[2].trim();
-			const inferred = this.inferExpressionType(rhs);
-			this.types.set(name, inferred);
+			const annotation = m[2];
+			const rhs = m[3].trim();
+
+			// If type annotation is undefined, infer from RHS expression
+			if (annotation !== undefined) {
+				const annotatedType = this.parseTypeString(annotation);
+				this.types.set(name, annotatedType);
+			} else {
+				const inferred = this.inferExpressionType(rhs);
+				this.types.set(name, inferred);
+			}
 		}
 	}
 
