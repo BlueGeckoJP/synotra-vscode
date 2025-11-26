@@ -15,14 +15,16 @@ export interface TypeInfo {
 	kind: TypeKind;
 	generics?: TypeInfo[]; // e.g. List<T> -> generics = [T]
 	readonlyName?: string; // optional friendly name
+	hasTypeAnnotation?: boolean; // whether this type was explicitly annotated
 }
 
 function make(
 	kind: TypeKind,
 	generics?: TypeInfo[],
 	readonlyName?: string,
+	hasTypeAnnotation?: boolean,
 ): TypeInfo {
-	return { kind, generics, readonlyName };
+	return { kind, generics, readonlyName, hasTypeAnnotation };
 }
 
 export function typeToString(t?: TypeInfo): string {
@@ -88,6 +90,7 @@ export class InferenceEngine {
 			// If type annotation is undefined, infer from RHS expression
 			if (annotation !== undefined) {
 				const annotatedType = this.parseTypeString(annotation);
+				annotatedType.hasTypeAnnotation = true;
 				this.types.set(name, annotatedType);
 			} else {
 				const inferred = this.inferExpressionType(rhs);
