@@ -4,5 +4,6 @@ node_modules
 /dist
 package-lock.json
 
-/test.sy
-/test.syi
+/examples/*
+*.sy
+*.syi
