@@ -63,7 +63,7 @@ export class TypeRegistry {
 	private userTypes: Map<string, TypeDefinition> = new Map();
 
 	constructor() {
-		initBuiltinTypes();
+		this.builtinTypes = initBuiltinTypes();
 	}
 
 	/**
