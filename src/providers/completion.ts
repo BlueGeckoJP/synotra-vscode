@@ -1,9 +1,9 @@
 import * as vscode from "vscode";
-import { typeToString } from "./inference";
-import type { DocumentInferenceService } from "./inferenceService";
-import { KEYWORDS } from "./keywords";
-import { ScopeResolver } from "./scope";
-import type { MethodInfo } from "./types";
+import { KEYWORDS } from "../core/keywords";
+import { ScopeResolver } from "../core/scope";
+import { typeToString } from "../inference/inference";
+import type { DocumentInferenceService } from "../inference/inferenceService";
+import type { MethodInfo } from "../inference/types";
 
 export default class Completion implements vscode.CompletionItemProvider {
 	private resolver = new ScopeResolver();

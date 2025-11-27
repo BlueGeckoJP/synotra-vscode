@@ -1,7 +1,7 @@
 import * as vscode from "vscode";
-import type { ASTNode } from "./ast";
+import type { ASTNode } from "../core/ast";
+import { Parser } from "../core/parser";
 import { InferenceEngine, type TypeInfo } from "./inference";
-import { Parser } from "./parser";
 import { TypeRegistry } from "./types";
 
 interface CacheEntry {

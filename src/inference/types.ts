@@ -1,4 +1,4 @@
-import type { ASTNode } from "./ast";
+import type { ASTNode } from "../core/ast";
 import { initBuiltinTypes } from "./builtinDefinition";
 import type { TypeInfo, TypeKind } from "./inference";
 
