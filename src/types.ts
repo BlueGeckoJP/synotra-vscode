@@ -361,8 +361,11 @@ export class TypeRegistry {
 		genericMap: Map<string, TypeInfo>,
 	): TypeInfo {
 		// Check if this is a generic placeholder (e.g., T, K, V)
-		if (type.readonlyName && genericMap.has(type.readonlyName)) {
-			return genericMap.get(type.readonlyName)!;
+		if (type.readonlyName) {
+			const mappedType = genericMap.get(type.readonlyName);
+			if (mappedType) {
+				return mappedType;
+			}
 		}
 
 		// Recursively resolve generics
