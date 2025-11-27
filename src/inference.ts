@@ -127,46 +127,19 @@ export class InferenceEngine {
 	/**
 	 * Scan assignment statements (without var/val keyword).
 	 * e.g. "x = 10" where x was declared earlier with type annotation.
-	 * This allows the inference engine to verify/confirm types from later assignments.
+	 * Note: Variables declared without type annotation (e.g. "var x") will NOT
+	 * have their type inferred from later assignments. Type annotation is required
+	 * for variables without initialization.
 	 */
-	private scanAssignments(lines: string[]) {
+	private scanAssignments(_lines: string[]) {
 		// Match: identifier = expression (but not var/val declarations)
-		const assignRegex = /^([a-zA-Z_][a-zA-Z0-9_]*)\s*=\s*(.+)$/;
-		for (const raw of lines) {
-			const line = raw.trim();
-
-			// Skip if this is a var/val declaration
-			if (/^\b(?:var|val)\s+/.test(line)) {
-				continue;
-			}
-
-			const m = line.match(assignRegex);
-			if (!m) {
-				continue;
-			}
-
-			const name = m[1];
-			const rhs = m[2].trim();
-
-			// Only process if the variable is already declared
-			const existingType = this.types.get(name);
-			if (!existingType) {
-				continue;
-			}
-
-			// If the variable has a type annotation, keep it
-			// Otherwise, infer from the RHS
-			if (existingType.hasTypeAnnotation) {
-				// Type is already set from annotation, no need to change
-				continue;
-			}
-
-			// If the existing type is Unknown, infer from RHS
-			if (existingType.kind === "Unknown") {
-				const inferred = this.inferExpressionType(rhs);
-				this.types.set(name, inferred);
-			}
-		}
+		//const assignRegex = /^([a-zA-Z_][a-zA-Z0-9_]*)\s*=\s*(.+)$/;
+		// Type annotation is required for variables without initialization.
+		// Do NOT infer type from later assignments - the type must be
+		// explicitly annotated at declaration time.
+		// If hasTypeAnnotation is false, the variable was declared without
+		// a type annotation (e.g. "var x"), which is not allowed.
+		// Keep the type as Unknown to indicate an error.
 	}
 
 	private inferExpressionType(expr: string): TypeInfo {
