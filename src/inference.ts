@@ -185,6 +185,21 @@ export class InferenceEngine {
 			}
 		}
 
+		// User-defined type constructor: ClassName.new(...) or ClassName<...>.new(...)
+		const customTypeMatch = expr.match(
+			/^\s*([A-Z][a-zA-Z0-9_]*)\s*(<.+>)?\s*\.new\s*\(/,
+		);
+		if (customTypeMatch) {
+			const typeName = customTypeMatch[1];
+			const genericContent = this.extractGenericContent(expr);
+			if (genericContent) {
+				const genericParams = this.parseCommaSeparated(genericContent);
+				const generics = genericParams.map((p) => this.parseTypeString(p));
+				return make("Custom", generics, typeName);
+			}
+			return make("Custom", undefined, typeName);
+		}
+
 		// Function call or identifier
 		if (/^[a-zA-Z_][a-zA-Z0-9_]*(\(.*\))?$/.test(expr)) {
 			const existingType = this.types.get(expr);
@@ -235,6 +250,7 @@ export class InferenceEngine {
 	 * Parse a type string recursively, handling nested generic types.
 	 * e.g. "List<Int>" -> { kind: "List", generics: [{ kind: "Int" }] }
 	 * e.g. "MutableMap<String, List<Int>>" -> { kind: "MutableMap", generics: [String, List<Int>] }
+	 * e.g. "MyClass" -> { kind: "Custom", readonlyName: "MyClass" }
 	 */
 	private parseTypeString(typeStr: string): TypeInfo {
 		const trimmed = typeStr.trim();
@@ -251,12 +267,16 @@ export class InferenceEngine {
 
 			// Map type name to TypeKind
 			const kind = this.typeNameToKind(baseName);
-			return make(kind, generics);
+			// For Custom types, preserve the original name
+			const readonlyName = kind === "Custom" ? baseName : undefined;
+			return make(kind, generics, readonlyName);
 		}
 
 		// Simple type without generics
 		const kind = this.typeNameToKind(trimmed);
-		return make(kind);
+		// For Custom types, preserve the original name
+		const readonlyName = kind === "Custom" ? trimmed : undefined;
+		return make(kind, undefined, readonlyName);
 	}
 
 	/**
@@ -279,7 +299,8 @@ export class InferenceEngine {
 			case "Function":
 				return "Function";
 			default:
-				return "Unknown";
+				// User-defined types (classes, actors)
+				return "Custom";
 		}
 	}
 
