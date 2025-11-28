@@ -1,5 +1,6 @@
 import * as vscode from "vscode";
 import { type DocumentInferenceService, typeToString } from "../inference";
+import { RegexPatterns } from "../inference/engine/regexPatterns";
 
 export default class Inlay implements vscode.InlayHintsProvider {
 	constructor(private inferenceService: DocumentInferenceService) {}
@@ -13,14 +14,14 @@ export default class Inlay implements vscode.InlayHintsProvider {
 		const lines = text.split(/\r?\n/);
 		const hints: vscode.InlayHint[] = [];
 
-		const initRegex = /^\s*(?:var|val)\s+([a-zA-Z_][a-zA-Z0-9_]*)\s*(?:=|:)/;
-
 		// Get inferred types from shared service
 		const { types } = this.inferenceService.getInferenceResult(document);
 
 		for (let i = 0; i < lines.length; i++) {
 			const line = lines[i];
-			const m = line.match(initRegex);
+			const m = line.match(
+				RegexPatterns.DECLARATION.NAME_WITH_ASSIGN_OR_TYPE_AT_LINE_START,
+			);
 			if (!m) {
 				continue;
 			}

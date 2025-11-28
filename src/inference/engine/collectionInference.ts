@@ -1,5 +1,6 @@
 import type { TypeInfo } from "../inference";
 import type { ExpressionInference } from "./expressionInference";
+import { RegexPatterns } from "./regexPatterns";
 
 function make(
 	kind:
@@ -105,9 +106,7 @@ export class CollectionInference {
 	 */
 	private parseMethodCall(line: string): MethodCall | null {
 		// Match pattern: identifier.identifier(
-		const methodMatch = line.match(
-			/([a-zA-Z_][a-zA-Z0-9_]*)\.([a-zA-Z_][a-zA-Z0-9_]*)\s*\(/,
-		);
+		const methodMatch = line.match(RegexPatterns.METHOD.OBJECT_AND_METHOD_NAME);
 		if (methodMatch?.index === undefined || !methodMatch) {
 			return null;
 		}

@@ -1,5 +1,6 @@
 import type { TypeInfo } from "../inference";
 import type { ExpressionInference } from "./expressionInference";
+import { RegexPatterns } from "./regexPatterns";
 
 function make(
 	kind:
@@ -44,7 +45,7 @@ export class BinaryOpInference {
 
 			// Check if this line is a variable assignment
 			const assignMatch = line.match(
-				/\b(?:var|val)\s+([a-zA-Z_][a-zA-Z0-9_]*)\s*=\s*(.+)/,
+				RegexPatterns.DECLARATION.NAME_AND_VALUE_ONLY,
 			);
 			if (!assignMatch) {
 				continue;

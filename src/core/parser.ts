@@ -1,6 +1,5 @@
+import { RegexPatterns } from "../inference/engine/regexPatterns";
 import type { ASTNode } from "./ast";
-
-const ARGUMENT_REGEX = /(?<=[(,]\s*)[a-zA-Z_][a-zA-Z0-9_]*(?=\s*:)/g;
 
 export class Parser {
 	private lines: string[];
@@ -33,7 +32,7 @@ export class Parser {
 			const line = this.lines[i];
 
 			// Match class definitions
-			const classMatch = line.match(/\bclass\s+([a-zA-Z_][a-zA-Z0-9_]*)/);
+			const classMatch = line.match(RegexPatterns.BUILTIN_TYPES.CLASS_NAME);
 			if (classMatch) {
 				const blockEnd = this.findBlockEnd(i);
 				const classNode: ASTNode = {
@@ -54,7 +53,7 @@ export class Parser {
 			}
 
 			// Match actor definitions
-			const actorMatch = line.match(/\bactor\s+([a-zA-Z_][a-zA-Z0-9_]*)/);
+			const actorMatch = line.match(RegexPatterns.BUILTIN_TYPES.ACTOR_NAME);
 			if (actorMatch) {
 				const blockEnd = this.findBlockEnd(i);
 				const actorNode: ASTNode = {
@@ -84,7 +83,7 @@ export class Parser {
 			const line = this.lines[i];
 
 			// Match function definitions: fun funcName or io fun funcName
-			const funMatch = line.match(/(?:io\s+)?fun\s+([a-zA-Z_][a-zA-Z0-9_]*)/);
+			const funMatch = line.match(RegexPatterns.FUNCTION.NAME_WITH_OPTIONAL_IO);
 			if (funMatch) {
 				const blockEnd = this.findBlockEnd(i);
 				const funNode: ASTNode = {
@@ -105,7 +104,7 @@ export class Parser {
 			}
 
 			// Match variable definitions: var varName or val varName
-			const varMatch = line.match(/\b(var|val)\s+([a-zA-Z_][a-zA-Z0-9_]*)/);
+			const varMatch = line.match(RegexPatterns.DECLARATION.KEYWORD_AND_NAME);
 			if (varMatch) {
 				const varNode: ASTNode = {
 					kind: "variable",
@@ -149,7 +148,9 @@ export class Parser {
 		parentNode: ASTNode,
 		lineNumber: number,
 	): void {
-		const argumentsMatch = line.match(ARGUMENT_REGEX);
+		const argumentsMatch = line.match(
+			RegexPatterns.PARAMETER.ARGUMENT_NAME_IN_SIGNATURE,
+		);
 		if (argumentsMatch) {
 			const args = argumentsMatch[0].split(",");
 			args.forEach((arg) => {

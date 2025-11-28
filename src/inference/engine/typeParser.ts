@@ -1,4 +1,5 @@
 import type { TypeInfo, TypeKind } from "../inference";
+import { RegexPatterns } from "./regexPatterns";
 
 function make(
 	kind: TypeKind,
@@ -24,7 +25,9 @@ export class TypeParser {
 		const trimmed = typeStr.trim();
 
 		// Check for generic type: TypeName<...>
-		const genericMatch = trimmed.match(/^([a-zA-Z_][a-zA-Z0-9_]*)\s*<(.+)>$/);
+		const genericMatch = trimmed.match(
+			RegexPatterns.OTHER.TYPE_NAME_AND_GENERIC_CONTENT,
+		);
 		if (genericMatch) {
 			const baseName = genericMatch[1];
 			const genericsStr = genericMatch[2];

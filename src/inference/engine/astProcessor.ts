@@ -1,5 +1,6 @@
 import type { ASTNode } from "../../core/ast";
 import type { TypeInfo } from "../inference";
+import { RegexPatterns } from "./regexPatterns";
 import type { TypeParser } from "./typeParser";
 
 function make(
@@ -102,9 +103,7 @@ export class ASTProcessor {
 		const line = lines[node.line].trim();
 
 		// Match: fun name(params) -> returnType
-		const funMatch = line.match(
-			/fun\s+[a-zA-Z_][a-zA-Z0-9_]*\s*\([^)]*\)\s*:\s*(.+?)\s*\{?$/,
-		);
+		const funMatch = line.match(RegexPatterns.FUNCTION.RETURN_TYPE);
 		if (funMatch) {
 			return this.typeParser.parseTypeString(funMatch[1].trim());
 		}

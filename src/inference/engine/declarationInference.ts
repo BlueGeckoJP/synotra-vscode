@@ -1,5 +1,6 @@
 import type { TypeInfo } from "../inference";
 import type { ExpressionInference } from "./expressionInference";
+import { RegexPatterns } from "./regexPatterns";
 import type { TypeParser } from "./typeParser";
 
 /**
@@ -27,7 +28,7 @@ export class DeclarationInference {
 	 */
 	public scanDeclarationsWithoutInit(lines: string[]): void {
 		// Match: var/val identifier: Type (without = sign)
-		const declRegex = /\b(?:var|val)\s+([a-zA-Z_][a-zA-Z0-9_]*)\s*:\s*([^=]+)$/;
+		const declRegex = RegexPatterns.DECLARATION.NAME_AND_TYPE_WITHOUT_VALUE;
 		for (const raw of lines) {
 			const line = raw.trim();
 			const m = line.match(declRegex);
@@ -54,8 +55,7 @@ export class DeclarationInference {
 		// 1: variable name, required
 		// 2: type annotation, optional (string | undefined)
 		// 3: right-hand side expression, required
-		const initRegex =
-			/\b(?:var|val)\s+([a-zA-Z_][a-zA-Z0-9_]*)\s*(?::\s*(.+?))?\s*=\s*(.+)$/;
+		const initRegex = RegexPatterns.DECLARATION.NAME_VALUE_AND_OPTIONAL_TYPE;
 		for (const raw of lines) {
 			const line = raw.trim();
 			const m = line.match(initRegex);

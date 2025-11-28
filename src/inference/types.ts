@@ -1,5 +1,6 @@
 import type { ASTNode } from "../core/ast";
 import { initBuiltinTypes } from "./builtinDefinition";
+import { RegexPatterns } from "./engine/regexPatterns";
 import type { TypeInfo, TypeKind } from "./inference";
 
 /**
@@ -133,7 +134,7 @@ export class TypeRegistry {
 
 		// Match: (io)? fun name(params) (-> returnType)?
 		const funMatch = line.match(
-			/(?:io\s+)?fun\s+([a-zA-Z_][a-zA-Z0-9_]*)\s*\(([^)]*)\)(?:\s*->\s*(.+))?/,
+			RegexPatterns.FUNCTION.NAME_PARAMS_AND_OPTIONAL_RETURN,
 		);
 		if (!funMatch) {
 			return {
@@ -168,7 +169,7 @@ export class TypeRegistry {
 
 		// Match: (var|val) name(: Type)?
 		const varMatch = line.match(
-			/\b(var|val)\s+([a-zA-Z_][a-zA-Z0-9_]*)(?:\s*:\s*([^=]+))?/,
+			RegexPatterns.DECLARATION.KEYWORD_NAME_AND_OPTIONAL_TYPE,
 		);
 		if (!varMatch) {
 			return {
@@ -203,7 +204,7 @@ export class TypeRegistry {
 		const parts = this.parseCommaSeparated(paramsStr);
 
 		for (const part of parts) {
-			const paramMatch = part.match(/([a-zA-Z_][a-zA-Z0-9_]*)\s*:\s*(.+)/);
+			const paramMatch = part.match(RegexPatterns.PARAMETER.NAME_AND_TYPE);
 			if (paramMatch) {
 				params.push({
 					name: paramMatch[1],
@@ -252,7 +253,9 @@ export class TypeRegistry {
 		const trimmed = typeStr.trim();
 
 		// Check for generic type: TypeName<...>
-		const genericMatch = trimmed.match(/^([a-zA-Z_][a-zA-Z0-9_]*)\s*<(.+)>$/);
+		const genericMatch = trimmed.match(
+			RegexPatterns.OTHER.TYPE_NAME_AND_GENERIC_CONTENT,
+		);
 		if (genericMatch) {
 			const baseName = genericMatch[1];
 			const genericsStr = genericMatch[2];

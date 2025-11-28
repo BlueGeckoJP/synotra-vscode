@@ -1,4 +1,5 @@
 import type { TypeInfo } from "../inference";
+import { RegexPatterns } from "./regexPatterns";
 import type { TypeParser } from "./typeParser";
 
 function make(
@@ -44,22 +45,22 @@ export class ExpressionInference {
 	 */
 	public inferExpressionType(expr: string): TypeInfo {
 		// String literal
-		if (/^".*"$/.test(expr)) {
+		if (RegexPatterns.BUILTIN_TYPES.STRING.test(expr)) {
 			return make("String");
 		}
 		// Boolean literal
-		if (/^(true|false)$/.test(expr)) {
+		if (RegexPatterns.BUILTIN_TYPES.BOOL.test(expr)) {
 			return make("Bool");
 		}
 		// Numeric literal (integer or float) -> Int for simplicity
-		if (/^[+-]?\d+(\.\d+)?$/.test(expr)) {
+		if (RegexPatterns.BUILTIN_TYPES.INT.test(expr)) {
 			return make("Int");
 		}
 
 		// Collection construction: TypeName<...>.new(...)
 		// Supports nested generics like List<List<Int>>.new() or Map<String, List<Int>>.new()
 		const collectionMatch = expr.match(
-			/^\s*(List|MutableMap|MutableSet)\s*(<.+>)?\s*\.new\s*\(/,
+			RegexPatterns.OTHER.BUILTIN_COLLECTION_CONSTRUCTOR_NAME_AND_OPTIONAL_TYPE,
 		);
 		if (collectionMatch) {
 			const typeName = collectionMatch[1];
@@ -91,7 +92,7 @@ export class ExpressionInference {
 
 		// User-defined type constructor: ClassName.new(...) or ClassName<...>.new(...)
 		const customTypeMatch = expr.match(
-			/^\s*([A-Z][a-zA-Z0-9_]*)\s*(<.+>)?\s*\.new\s*\(/,
+			RegexPatterns.OTHER.CONSTRUCTOR_NAME_AND_OPTIONAL_TYPE,
 		);
 		if (customTypeMatch) {
 			const typeName = customTypeMatch[1];
@@ -108,7 +109,7 @@ export class ExpressionInference {
 		}
 
 		// Function call: funcName(...) - check return type from collected functions
-		const funcCallMatch = expr.match(/^([a-zA-Z_][a-zA-Z0-9_]*)\s*\(/);
+		const funcCallMatch = expr.match(RegexPatterns.FUNCTION.NAME);
 		if (funcCallMatch) {
 			const funcName = funcCallMatch[1];
 			const returnType = this.functionReturnTypes.get(funcName);
@@ -118,7 +119,7 @@ export class ExpressionInference {
 		}
 
 		// Function call or identifier
-		if (/^[a-zA-Z_][a-zA-Z0-9_]*(\(.*\))?$/.test(expr)) {
+		if (RegexPatterns.FUNCTION.ARGUMENTS_WITH_EOL.test(expr)) {
 			const existingType = this.types.get(expr);
 			if (existingType) {
 				return existingType;
