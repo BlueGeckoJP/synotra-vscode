@@ -1,6 +1,6 @@
 import type { TypeInfo } from "../inference";
 import type { ExpressionInference } from "./expressionInference";
-import { RegexPatterns } from "./regexPatterns";
+import { extractMethodCall, RegexPatterns } from "./regexPatterns";
 
 function make(
 	kind:
@@ -60,6 +60,33 @@ export class CollectionInference {
 	}
 
 	/**
+	 * Process an add() method call on a collection.
+	 * Infers element type for List or MutableSet.
+	 */
+	private processAddMethodCall(call: MethodCall): void {
+		if (call.args.length !== 1) {
+			return;
+		}
+
+		const elemType = this.expressionInference.inferExpressionType(call.args[0]);
+		this.mergeCollectionElementType(call.object, elemType);
+	}
+
+	/**
+	 * Process a put() method call on a map.
+	 * Infers key and value types for MutableMap.
+	 */
+	private processPutMethodCall(call: MethodCall): void {
+		if (call.args.length !== 2) {
+			return;
+		}
+
+		const keyType = this.expressionInference.inferExpressionType(call.args[0]);
+		const valType = this.expressionInference.inferExpressionType(call.args[1]);
+		this.mergeMapTypes(call.object, keyType, valType);
+	}
+
+	/**
 	 * Scan collection method calls to infer types.
 	 * e.g. list.add(10) -> infer list as List<Int>
 	 * e.g. map.put("key", 20) -> infer map as MutableMap<String, Int>
@@ -76,24 +103,11 @@ export class CollectionInference {
 
 			switch (call.method) {
 				case "add":
-					if (call.args.length === 1) {
-						const elemType = this.expressionInference.inferExpressionType(
-							call.args[0],
-						);
-						this.mergeCollectionElementType(call.object, elemType);
-					}
+					this.processAddMethodCall(call);
 					break;
 
 				case "put":
-					if (call.args.length === 2) {
-						const keyType = this.expressionInference.inferExpressionType(
-							call.args[0],
-						);
-						const valType = this.expressionInference.inferExpressionType(
-							call.args[1],
-						);
-						this.mergeMapTypes(call.object, keyType, valType);
-					}
+					this.processPutMethodCall(call);
 					break;
 			}
 		}
@@ -105,15 +119,19 @@ export class CollectionInference {
 	 * e.g. "list.add(fn(1,2))" -> { object: "list", method: "add", args: ["fn(1,2)"] }
 	 */
 	private parseMethodCall(line: string): MethodCall | null {
-		// Match pattern: identifier.identifier(
-		const methodMatch = line.match(RegexPatterns.METHOD.OBJECT_AND_METHOD_NAME);
-		if (methodMatch?.index === undefined || !methodMatch) {
+		// Extract object and method names using the extract function
+		const methodMatch = extractMethodCall(line);
+		if (!methodMatch) {
 			return null;
 		}
 
-		const object = methodMatch[1];
-		const method = methodMatch[2];
-		const startIndex = methodMatch.index + methodMatch[0].length;
+		// Find the start of arguments (after the method call pattern)
+		const fullMatch = line.match(RegexPatterns.METHOD.OBJECT_AND_METHOD_NAME);
+		if (!fullMatch?.index) {
+			return null;
+		}
+
+		const startIndex = fullMatch.index + fullMatch[0].length;
 
 		// Find the matching closing parenthesis
 		let depth = 1;
@@ -136,7 +154,11 @@ export class CollectionInference {
 			argsString,
 		) || [argsString];
 
-		return { object, method, args };
+		return {
+			object: methodMatch.objectName,
+			method: methodMatch.methodName,
+			args,
+		};
 	}
 
 	/**

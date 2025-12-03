@@ -1,6 +1,15 @@
 import type { ASTNode } from "../core/ast";
 import { initBuiltinTypes } from "./builtinDefinition";
-import { RegexPatterns } from "./engine/regexPatterns";
+import {
+	type DeclarationKeywordNameAndTypeMatch,
+	extractDeclarationKeywordNameAndType,
+	extractFunctionSignature,
+	extractGenericType,
+	extractParameterNameAndType,
+	type FunctionSignatureMatch,
+	type GenericTypeMatch,
+	type ParameterNameAndTypeMatch,
+} from "./engine/regexPatterns";
 import type { TypeInfo, TypeKind } from "./inference";
 
 /**
@@ -119,6 +128,44 @@ export class TypeRegistry {
 	}
 
 	/**
+	 * Process a function signature match into MethodInfo.
+	 */
+	private processFunctionSignature(
+		match: FunctionSignatureMatch,
+		nodeName: string,
+	): MethodInfo {
+		const params = this.parseParams(match.params);
+		const returnType = match.returnType
+			? this.parseTypeString(match.returnType)
+			: t("Unknown", undefined, "Unit");
+
+		return {
+			name: nodeName,
+			returnType,
+			params,
+		};
+	}
+
+	/**
+	 * Process a field declaration match into FieldInfo.
+	 */
+	private processFieldDeclaration(
+		match: DeclarationKeywordNameAndTypeMatch,
+		nodeName: string,
+	): FieldInfo {
+		const mutable = match.keyword === "var";
+		const type = match.typeAnnotation
+			? this.parseTypeString(match.typeAnnotation)
+			: t("Unknown");
+
+		return {
+			name: nodeName,
+			type,
+			mutable,
+		};
+	}
+
+	/**
 	 * Parse method signature from source line
 	 * e.g., "fun doSomething(x: Int, y: String) -> Bool"
 	 */
@@ -133,10 +180,8 @@ export class TypeRegistry {
 		const line = lines[node.line].trim();
 
 		// Match: (io)? fun name(params) (-> returnType)?
-		const funMatch = line.match(
-			RegexPatterns.FUNCTION.NAME_PARAMS_AND_OPTIONAL_RETURN,
-		);
-		if (!funMatch) {
+		const match = extractFunctionSignature(line);
+		if (!match) {
 			return {
 				name: node.name,
 				returnType: t("Unknown", undefined, "Unit"),
@@ -144,16 +189,7 @@ export class TypeRegistry {
 			};
 		}
 
-		const params = this.parseParams(funMatch[2]);
-		const returnType = funMatch[3]
-			? this.parseTypeString(funMatch[3].trim())
-			: t("Unknown", undefined, "Unit");
-
-		return {
-			name: node.name,
-			returnType,
-			params,
-		};
+		return this.processFunctionSignature(match, node.name);
 	}
 
 	/**
@@ -168,10 +204,8 @@ export class TypeRegistry {
 		const line = lines[node.line].trim();
 
 		// Match: (var|val) name(: Type)?
-		const varMatch = line.match(
-			RegexPatterns.DECLARATION.KEYWORD_NAME_AND_OPTIONAL_TYPE,
-		);
-		if (!varMatch) {
+		const match = extractDeclarationKeywordNameAndType(line);
+		if (!match) {
 			return {
 				name: node.name,
 				type: t("Unknown"),
@@ -179,15 +213,16 @@ export class TypeRegistry {
 			};
 		}
 
-		const mutable = varMatch[1] === "var";
-		const type = varMatch[3]
-			? this.parseTypeString(varMatch[3].trim())
-			: t("Unknown");
+		return this.processFieldDeclaration(match, node.name);
+	}
 
+	/**
+	 * Process a parameter match into ParamInfo.
+	 */
+	private processParameter(match: ParameterNameAndTypeMatch): ParamInfo {
 		return {
-			name: node.name,
-			type,
-			mutable,
+			name: match.name,
+			type: this.parseTypeString(match.type),
 		};
 	}
 
@@ -204,12 +239,9 @@ export class TypeRegistry {
 		const parts = this.parseCommaSeparated(paramsStr);
 
 		for (const part of parts) {
-			const paramMatch = part.match(RegexPatterns.PARAMETER.NAME_AND_TYPE);
-			if (paramMatch) {
-				params.push({
-					name: paramMatch[1],
-					type: this.parseTypeString(paramMatch[2].trim()),
-				});
+			const match = extractParameterNameAndType(part);
+			if (match) {
+				params.push(this.processParameter(match));
 			}
 		}
 
@@ -247,22 +279,25 @@ export class TypeRegistry {
 	}
 
 	/**
+	 * Process a generic type match into TypeInfo.
+	 */
+	private processGenericType(match: GenericTypeMatch): TypeInfo {
+		const genericParams = this.parseCommaSeparated(match.genericContent);
+		const generics = genericParams.map((p) => this.parseTypeString(p));
+		const kind = this.typeNameToKind(match.baseName);
+		return t(kind, generics, kind === "Custom" ? match.baseName : undefined);
+	}
+
+	/**
 	 * Parse type string to TypeInfo
 	 */
 	private parseTypeString(typeStr: string): TypeInfo {
 		const trimmed = typeStr.trim();
 
 		// Check for generic type: TypeName<...>
-		const genericMatch = trimmed.match(
-			RegexPatterns.OTHER.TYPE_NAME_AND_GENERIC_CONTENT,
-		);
-		if (genericMatch) {
-			const baseName = genericMatch[1];
-			const genericsStr = genericMatch[2];
-			const genericParams = this.parseCommaSeparated(genericsStr);
-			const generics = genericParams.map((p) => this.parseTypeString(p));
-			const kind = this.typeNameToKind(baseName);
-			return t(kind, generics, kind === "Custom" ? baseName : undefined);
+		const match = extractGenericType(trimmed);
+		if (match) {
+			return this.processGenericType(match);
 		}
 
 		const kind = this.typeNameToKind(trimmed);

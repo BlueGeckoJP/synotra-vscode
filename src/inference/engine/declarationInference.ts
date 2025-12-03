@@ -1,6 +1,11 @@
 import type { TypeInfo } from "../inference";
 import type { ExpressionInference } from "./expressionInference";
-import { RegexPatterns } from "./regexPatterns";
+import {
+	type DeclarationNameAndTypeMatch,
+	type DeclarationWithOptionalTypeMatch,
+	extractDeclarationNameAndType,
+	extractDeclarationWithOptionalType,
+} from "./regexPatterns";
 import type { TypeParser } from "./typeParser";
 
 /**
@@ -23,25 +28,50 @@ export class DeclarationInference {
 	}
 
 	/**
+	 * Process a declaration with type annotation but no initialization.
+	 * e.g., "var x: Int" or "val y: String"
+	 */
+	private processDeclarationWithTypeOnly(
+		match: DeclarationNameAndTypeMatch,
+	): void {
+		const annotatedType = this.typeParser.parseTypeString(match.typeAnnotation);
+		annotatedType.hasTypeAnnotation = true;
+		this.types.set(match.name, annotatedType);
+	}
+
+	/**
+	 * Process a declaration with initialization (and optional type annotation).
+	 * e.g., "var x: Int = 10" or "val y = List<Int>.new()"
+	 */
+	private processDeclarationWithInit(
+		match: DeclarationWithOptionalTypeMatch,
+	): void {
+		if (match.typeAnnotation !== undefined) {
+			const annotatedType = this.typeParser.parseTypeString(
+				match.typeAnnotation,
+			);
+			annotatedType.hasTypeAnnotation = true;
+			this.types.set(match.name, annotatedType);
+		} else {
+			const inferred = this.expressionInference.inferExpressionType(
+				match.value,
+			);
+			this.types.set(match.name, inferred);
+		}
+	}
+
+	/**
 	 * Scan declarations with type annotation but without initialization.
 	 * e.g. "var x: Int" or "val y: String"
 	 */
 	public scanDeclarationsWithoutInit(lines: string[]): void {
-		// Match: var/val identifier: Type (without = sign)
-		const declRegex = RegexPatterns.DECLARATION.NAME_AND_TYPE_WITHOUT_VALUE;
 		for (const raw of lines) {
 			const line = raw.trim();
-			const m = line.match(declRegex);
-			if (!m) {
+			const match = extractDeclarationNameAndType(line);
+			if (!match) {
 				continue;
 			}
-
-			const name = m[1];
-			const annotation = m[2].trim();
-
-			const annotatedType = this.typeParser.parseTypeString(annotation);
-			annotatedType.hasTypeAnnotation = true;
-			this.types.set(name, annotatedType);
+			this.processDeclarationWithTypeOnly(match);
 		}
 	}
 
@@ -51,31 +81,13 @@ export class DeclarationInference {
 	 * e.g. "var x: Int = 10" or "val y = List<Int>.new()"
 	 */
 	public scanInitializers(lines: string[]): void {
-		// Match groups:
-		// 1: variable name, required
-		// 2: type annotation, optional (string | undefined)
-		// 3: right-hand side expression, required
-		const initRegex = RegexPatterns.DECLARATION.NAME_VALUE_AND_OPTIONAL_TYPE;
 		for (const raw of lines) {
 			const line = raw.trim();
-			const m = line.match(initRegex);
-			if (!m) {
+			const match = extractDeclarationWithOptionalType(line);
+			if (!match) {
 				continue;
 			}
-
-			const name = m[1];
-			const annotation = m[2];
-			const rhs = m[3].trim();
-
-			// If type annotation is undefined, infer from RHS expression
-			if (annotation !== undefined) {
-				const annotatedType = this.typeParser.parseTypeString(annotation);
-				annotatedType.hasTypeAnnotation = true;
-				this.types.set(name, annotatedType);
-			} else {
-				const inferred = this.expressionInference.inferExpressionType(rhs);
-				this.types.set(name, inferred);
-			}
+			this.processDeclarationWithInit(match);
 		}
 	}
 

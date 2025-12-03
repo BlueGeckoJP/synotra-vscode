@@ -1,6 +1,9 @@
 import type { TypeInfo } from "../inference";
 import type { ExpressionInference } from "./expressionInference";
-import { RegexPatterns } from "./regexPatterns";
+import {
+	type DeclarationNameAndValueMatch,
+	extractDeclarationNameAndValue,
+} from "./regexPatterns";
 
 function make(
 	kind:
@@ -37,6 +40,28 @@ export class BinaryOpInference {
 	}
 
 	/**
+	 * Process a binary operation assignment.
+	 * Infers the result type and updates the variable's type.
+	 */
+	private processBinaryOpAssignment(match: DeclarationNameAndValueMatch): void {
+		const expr = match.value.trim();
+
+		// Check if expression contains binary operators
+		if (!/[+\-*/]/.test(expr)) {
+			return;
+		}
+
+		// Infer the type of the entire expression
+		const resultType = this.inferBinaryExpressionType(expr);
+		if (resultType) {
+			const existingType = this.types.get(match.name);
+			if (!existingType || this.checkContainsUnknown(existingType)) {
+				this.types.set(match.name, resultType);
+			}
+		}
+	}
+
+	/**
 	 * Scan variable assignments containing binary operators to infer types.
 	 */
 	public scanBinaryOps(lines: string[]): void {
@@ -44,29 +69,12 @@ export class BinaryOpInference {
 			const line = raw.trim();
 
 			// Check if this line is a variable assignment
-			const assignMatch = line.match(
-				RegexPatterns.DECLARATION.NAME_AND_VALUE_ONLY,
-			);
-			if (!assignMatch) {
+			const match = extractDeclarationNameAndValue(line);
+			if (!match) {
 				continue;
 			}
 
-			const varName = assignMatch[1];
-			const expr = assignMatch[2].trim();
-
-			// Check if expression contains binary operators
-			if (!/[+\-*/]/.test(expr)) {
-				continue;
-			}
-
-			// Infer the type of the entire expression
-			const resultType = this.inferBinaryExpressionType(expr);
-			if (resultType) {
-				const existingType = this.types.get(varName);
-				if (!existingType || this.checkContainsUnknown(existingType)) {
-					this.types.set(varName, resultType);
-				}
-			}
+			this.processBinaryOpAssignment(match);
 		}
 	}
 
