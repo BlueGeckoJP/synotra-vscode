@@ -1,5 +1,9 @@
 import * as vscode from "vscode";
-import { type DocumentInferenceService, typeToString } from "../inference";
+import {
+	type DocumentInferenceService,
+	type TypeInfo,
+	typeToString,
+} from "../inference";
 import {
 	type DeclarationNameAtLineStartMatch,
 	extractDeclarationNameAtLineStart,
@@ -15,7 +19,7 @@ export default class Inlay implements vscode.InlayHintsProvider {
 		match: DeclarationNameAtLineStartMatch,
 		line: string,
 		lineIndex: number,
-		types: Map<string, unknown>,
+		types: Map<string, TypeInfo>,
 	): vscode.InlayHint | null {
 		const inferred = types.get(match.name) as
 			| { hasTypeAnnotation?: boolean }
