@@ -41,7 +41,7 @@ export const RegexPatterns = {
 	BUILTIN_TYPES: {
 		STRING: /^".*"$/,
 		BOOL: /^(true|false)$/,
-		INT: /^[+-]?\d+(\.\d+)?$/,
+		NUMBER: /^[+-]?\d+(\.\d+)?$/,
 		CLASS_NAME: /\bclass\s+([a-zA-Z_][a-zA-Z0-9_]*)/,
 		ACTOR_NAME: /\bactor\s+([a-zA-Z_][a-zA-Z0-9_]*)/,
 	},
