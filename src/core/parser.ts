@@ -224,12 +224,10 @@ export class Parser {
 			RegexPatterns.PARAMETER.ARGUMENT_NAME_IN_SIGNATURE,
 		);
 		if (argumentsMatch) {
-			const args = argumentsMatch[0].split(",");
-			args.forEach((arg) => {
-				const argName = arg.trim();
+			argumentsMatch.forEach((argName) => {
 				const argNode: ASTNode = {
 					kind: "variable",
-					name: argName,
+					name: argName.trim(),
 					line: lineNumber,
 					startLine: lineNumber,
 					endLine: lineNumber,
