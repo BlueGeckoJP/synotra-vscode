@@ -467,7 +467,7 @@ export function isBoolLiteral(expr: string): boolean {
  * Check if an expression is an integer literal.
  */
 export function isIntLiteral(expr: string): boolean {
-	return RegexPatterns.BUILTIN_TYPES.INT.test(expr);
+	return RegexPatterns.BUILTIN_TYPES.NUMBER.test(expr);
 }
 
 /**
