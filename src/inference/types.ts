@@ -4,12 +4,11 @@ import {
 	type DeclarationKeywordNameAndTypeMatch,
 	extractDeclarationKeywordNameAndType,
 	extractFunctionSignature,
-	extractGenericType,
 	extractParameterNameAndType,
 	type FunctionSignatureMatch,
-	type GenericTypeMatch,
 	type ParameterNameAndTypeMatch,
 } from "./engine/regexPatterns";
+import { TypeParser } from "./engine/typeParser";
 import type { TypeInfo, TypeKind } from "./inference";
 
 /**
@@ -71,6 +70,7 @@ export function generic(name: string): TypeInfo {
 export class TypeRegistry {
 	private builtinTypes: Map<string, TypeDefinition> = new Map();
 	private userTypes: Map<string, TypeDefinition> = new Map();
+	private typeParser: TypeParser = new TypeParser();
 
 	constructor() {
 		this.builtinTypes = initBuiltinTypes();
@@ -136,7 +136,7 @@ export class TypeRegistry {
 	): MethodInfo {
 		const params = this.parseParams(match.params);
 		const returnType = match.returnType
-			? this.parseTypeString(match.returnType)
+			? this.typeParser.parseTypeString(match.returnType)
 			: t("Unknown", undefined, "Unit");
 
 		return {
@@ -155,7 +155,7 @@ export class TypeRegistry {
 	): FieldInfo {
 		const mutable = match.keyword === "var";
 		const type = match.typeAnnotation
-			? this.parseTypeString(match.typeAnnotation)
+			? this.typeParser.parseTypeString(match.typeAnnotation)
 			: t("Unknown");
 
 		return {
@@ -222,7 +222,7 @@ export class TypeRegistry {
 	private processParameter(match: ParameterNameAndTypeMatch): ParamInfo {
 		return {
 			name: match.name,
-			type: this.parseTypeString(match.type),
+			type: this.typeParser.parseTypeString(match.type),
 		};
 	}
 
@@ -236,7 +236,7 @@ export class TypeRegistry {
 		}
 
 		const params: ParamInfo[] = [];
-		const parts = this.parseCommaSeparated(paramsStr);
+		const parts = this.typeParser.parseCommaSeparated(paramsStr);
 
 		for (const part of parts) {
 			const match = extractParameterNameAndType(part);
@@ -246,83 +246,6 @@ export class TypeRegistry {
 		}
 
 		return params;
-	}
-
-	/**
-	 * Parse comma-separated items respecting nested brackets
-	 */
-	private parseCommaSeparated(str: string): string[] {
-		const items: string[] = [];
-		let current = "";
-		let depth = 0;
-
-		for (const ch of str) {
-			if (ch === "(" || ch === "[" || ch === "{" || ch === "<") {
-				depth++;
-				current += ch;
-			} else if (ch === ")" || ch === "]" || ch === "}" || ch === ">") {
-				depth--;
-				current += ch;
-			} else if (ch === "," && depth === 0) {
-				items.push(current.trim());
-				current = "";
-			} else {
-				current += ch;
-			}
-		}
-
-		if (current.trim()) {
-			items.push(current.trim());
-		}
-
-		return items;
-	}
-
-	/**
-	 * Process a generic type match into TypeInfo.
-	 */
-	private processGenericType(match: GenericTypeMatch): TypeInfo {
-		const genericParams = this.parseCommaSeparated(match.genericContent);
-		const generics = genericParams.map((p) => this.parseTypeString(p));
-		const kind = this.typeNameToKind(match.baseName);
-		return t(kind, generics, kind === "Custom" ? match.baseName : undefined);
-	}
-
-	/**
-	 * Parse type string to TypeInfo
-	 */
-	private parseTypeString(typeStr: string): TypeInfo {
-		const trimmed = typeStr.trim();
-
-		// Check for generic type: TypeName<...>
-		const match = extractGenericType(trimmed);
-		if (match) {
-			return this.processGenericType(match);
-		}
-
-		const kind = this.typeNameToKind(trimmed);
-		return t(kind, undefined, kind === "Custom" ? trimmed : undefined);
-	}
-
-	private typeNameToKind(name: string): TypeKind {
-		switch (name) {
-			case "Int":
-				return "Int";
-			case "String":
-				return "String";
-			case "Bool":
-				return "Bool";
-			case "List":
-				return "List";
-			case "MutableMap":
-				return "MutableMap";
-			case "MutableSet":
-				return "MutableSet";
-			case "Function":
-				return "Function";
-			default:
-				return "Custom";
-		}
 	}
 
 	/**
