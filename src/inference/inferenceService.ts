@@ -1,12 +1,14 @@
 import * as vscode from "vscode";
-import type { ASTNode } from "./ast";
+import type { ASTNode } from "../core/ast";
+import { Parser } from "../core/parser";
 import { InferenceEngine, type TypeInfo } from "./inference";
-import { Parser } from "./parser";
+import { TypeRegistry } from "./types";
 
 interface CacheEntry {
 	version: number;
 	ast: ASTNode;
 	types: Map<string, TypeInfo>;
+	lines: string[];
 }
 
 /**
@@ -18,6 +20,7 @@ export class DocumentInferenceService implements vscode.Disposable {
 	private engine = new InferenceEngine();
 	private cache = new Map<string, CacheEntry>(); // uri -> CacheEntry
 	private disposables: vscode.Disposable[] = [];
+	public readonly typeRegistry = new TypeRegistry();
 
 	constructor() {
 		// Invalidate cache when document changes
@@ -42,24 +45,29 @@ export class DocumentInferenceService implements vscode.Disposable {
 	public getInferenceResult(document: vscode.TextDocument): {
 		ast: ASTNode;
 		types: Map<string, TypeInfo>;
+		lines: string[];
 	} {
 		const uri = document.uri.toString();
 		const version = document.version;
 		const cached = this.cache.get(uri);
 
 		if (cached?.version === version) {
-			return { ast: cached.ast, types: cached.types };
+			return { ast: cached.ast, types: cached.types, lines: cached.lines };
 		}
 
 		// Cache miss: parse and infer
 		const text = document.getText();
+		const lines = text.split(/\r?\n/);
 		const parser = new Parser(text);
 		const ast = parser.parse();
 		const types = this.engine.inferFromText(text, ast);
 
-		this.cache.set(uri, { version, ast, types });
+		// Collect user-defined types from AST
+		this.typeRegistry.collectUserTypes(ast, lines);
 
-		return { ast, types };
+		this.cache.set(uri, { version, ast, types, lines });
+
+		return { ast, types, lines };
 	}
 
 	dispose() {
