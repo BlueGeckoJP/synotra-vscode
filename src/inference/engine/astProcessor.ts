@@ -1,5 +1,9 @@
 import type { ASTNode } from "../../core/ast";
 import type { TypeInfo } from "../inference";
+import {
+	extractFunctionReturnType,
+	type FunctionReturnTypeMatch,
+} from "./regexPatterns";
 import type { TypeParser } from "./typeParser";
 
 function make(
@@ -63,6 +67,14 @@ export class ASTProcessor {
 	}
 
 	/**
+	 * Process a function return type match.
+	 * Parses the return type string and returns the TypeInfo.
+	 */
+	private processFunctionReturnType(match: FunctionReturnTypeMatch): TypeInfo {
+		return this.typeParser.parseTypeString(match.returnType);
+	}
+
+	/**
 	 * Collect function return types from AST.
 	 * Parses function definitions like "fun x() -> Int" or "io fun y(a: String) -> Bool"
 	 */
@@ -101,12 +113,10 @@ export class ASTProcessor {
 
 		const line = lines[node.line].trim();
 
-		// Match: fun name(params) -> returnType
-		const funMatch = line.match(
-			/fun\s+[a-zA-Z_][a-zA-Z0-9_]*\s*\([^)]*\)\s*:\s*(.+?)\s*\{?$/,
-		);
-		if (funMatch) {
-			return this.typeParser.parseTypeString(funMatch[1].trim());
+		// Extract and process function return type
+		const match = extractFunctionReturnType(line);
+		if (match) {
+			return this.processFunctionReturnType(match);
 		}
 
 		return null;

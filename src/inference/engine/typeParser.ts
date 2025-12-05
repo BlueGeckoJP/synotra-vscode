@@ -1,4 +1,5 @@
 import type { TypeInfo, TypeKind } from "../inference";
+import { extractGenericType, type GenericTypeMatch } from "./regexPatterns";
 
 function make(
 	kind: TypeKind,
@@ -15,6 +16,22 @@ function make(
  */
 export class TypeParser {
 	/**
+	 * Process a generic type match result.
+	 * Parses the generic parameters and returns a TypeInfo.
+	 */
+	private processGenericType(match: GenericTypeMatch): TypeInfo {
+		// Parse the generic type parameters recursively
+		const genericParams = this.parseCommaSeparated(match.genericContent);
+		const generics = genericParams.map((p) => this.parseTypeString(p));
+
+		// Map type name to TypeKind
+		const kind = this.typeNameToKind(match.baseName);
+		// For Custom types, preserve the original name
+		const readonlyName = kind === "Custom" ? match.baseName : undefined;
+		return make(kind, generics, readonlyName);
+	}
+
+	/**
 	 * Parse a type string recursively, handling nested generic types.
 	 * e.g. "List<Int>" -> { kind: "List", generics: [{ kind: "Int" }] }
 	 * e.g. "MutableMap<String, List<Int>>" -> { kind: "MutableMap", generics: [String, List<Int>] }
@@ -24,20 +41,9 @@ export class TypeParser {
 		const trimmed = typeStr.trim();
 
 		// Check for generic type: TypeName<...>
-		const genericMatch = trimmed.match(/^([a-zA-Z_][a-zA-Z0-9_]*)\s*<(.+)>$/);
+		const genericMatch = extractGenericType(trimmed);
 		if (genericMatch) {
-			const baseName = genericMatch[1];
-			const genericsStr = genericMatch[2];
-
-			// Parse the generic type parameters recursively
-			const genericParams = this.parseCommaSeparated(genericsStr);
-			const generics = genericParams.map((p) => this.parseTypeString(p));
-
-			// Map type name to TypeKind
-			const kind = this.typeNameToKind(baseName);
-			// For Custom types, preserve the original name
-			const readonlyName = kind === "Custom" ? baseName : undefined;
-			return make(kind, generics, readonlyName);
+			return this.processGenericType(genericMatch);
 		}
 
 		// Simple type without generics

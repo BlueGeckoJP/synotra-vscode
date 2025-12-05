@@ -1,6 +1,15 @@
+import {
+	type ActorNameMatch,
+	type ClassNameMatch,
+	type DeclarationKeywordAndNameMatch,
+	extractActorName,
+	extractClassName,
+	extractDeclarationKeywordAndName,
+	extractFunctionNameWithOptionalIo,
+	type FunctionNameWithOptionalIoMatch,
+	RegexPatterns,
+} from "../inference/engine/regexPatterns";
 import type { ASTNode } from "./ast";
-
-const ARGUMENT_REGEX = /(?<=[(,]\s*)[a-zA-Z_][a-zA-Z0-9_]*(?=\s*:)/g;
 
 export class Parser {
 	private lines: string[];
@@ -24,6 +33,97 @@ export class Parser {
 		return root;
 	}
 
+	/**
+	 * Process a class definition match into an AST node.
+	 */
+	private processClassDefinition(
+		match: ClassNameMatch,
+		line: string,
+		lineIndex: number,
+		parent: ASTNode,
+	): ASTNode {
+		const blockEnd = this.findBlockEnd(lineIndex);
+		const classNode: ASTNode = {
+			kind: "class",
+			name: match.name,
+			line: lineIndex,
+			startLine: lineIndex,
+			endLine: blockEnd,
+			children: [],
+			parent,
+		};
+		this.parseBlockContent(classNode, lineIndex + 1, blockEnd);
+		this.parseArguments(line, classNode, lineIndex);
+		return classNode;
+	}
+
+	/**
+	 * Process an actor definition match into an AST node.
+	 */
+	private processActorDefinition(
+		match: ActorNameMatch,
+		line: string,
+		lineIndex: number,
+		parent: ASTNode,
+	): ASTNode {
+		const blockEnd = this.findBlockEnd(lineIndex);
+		const actorNode: ASTNode = {
+			kind: "actor",
+			name: match.name,
+			line: lineIndex,
+			startLine: lineIndex,
+			endLine: blockEnd,
+			children: [],
+			parent,
+		};
+		this.parseBlockContent(actorNode, lineIndex + 1, blockEnd);
+		this.parseArguments(line, actorNode, lineIndex);
+		return actorNode;
+	}
+
+	/**
+	 * Process a function definition match into an AST node.
+	 */
+	private processFunctionDefinition(
+		match: FunctionNameWithOptionalIoMatch,
+		line: string,
+		lineIndex: number,
+		parent: ASTNode,
+	): ASTNode {
+		const blockEnd = this.findBlockEnd(lineIndex);
+		const funNode: ASTNode = {
+			kind: "function",
+			name: match.name,
+			line: lineIndex,
+			startLine: lineIndex,
+			endLine: blockEnd,
+			children: [],
+			parent,
+		};
+		this.parseBlockContent(funNode, lineIndex + 1, blockEnd);
+		this.parseArguments(line, funNode, lineIndex);
+		return funNode;
+	}
+
+	/**
+	 * Process a variable definition match into an AST node.
+	 */
+	private processVariableDefinition(
+		match: DeclarationKeywordAndNameMatch,
+		lineIndex: number,
+		parent: ASTNode,
+	): ASTNode {
+		return {
+			kind: "variable",
+			name: match.name,
+			line: lineIndex,
+			startLine: lineIndex,
+			endLine: lineIndex,
+			children: [],
+			parent,
+		};
+	}
+
 	private parseTopLevel(
 		parent: ASTNode,
 		startLine: number,
@@ -33,43 +133,29 @@ export class Parser {
 			const line = this.lines[i];
 
 			// Match class definitions
-			const classMatch = line.match(/\bclass\s+([a-zA-Z_][a-zA-Z0-9_]*)/);
+			const classMatch = extractClassName(line);
 			if (classMatch) {
-				const blockEnd = this.findBlockEnd(i);
-				const classNode: ASTNode = {
-					kind: "class",
-					name: classMatch[1],
-					line: i,
-					startLine: i,
-					endLine: blockEnd,
-					children: [],
+				const classNode = this.processClassDefinition(
+					classMatch,
+					line,
+					i,
 					parent,
-				};
-				this.parseBlockContent(classNode, i + 1, blockEnd);
-				this.parseArguments(line, classNode, i);
-				i = blockEnd;
-
+				);
+				i = classNode.endLine;
 				parent.children.push(classNode);
 				continue;
 			}
 
 			// Match actor definitions
-			const actorMatch = line.match(/\bactor\s+([a-zA-Z_][a-zA-Z0-9_]*)/);
+			const actorMatch = extractActorName(line);
 			if (actorMatch) {
-				const blockEnd = this.findBlockEnd(i);
-				const actorNode: ASTNode = {
-					kind: "actor",
-					name: actorMatch[1],
-					line: i,
-					startLine: i,
-					endLine: blockEnd,
-					children: [],
+				const actorNode = this.processActorDefinition(
+					actorMatch,
+					line,
+					i,
 					parent,
-				};
-				this.parseBlockContent(actorNode, i + 1, blockEnd);
-				this.parseArguments(line, actorNode, i);
-				i = blockEnd;
-
+				);
+				i = actorNode.endLine;
 				parent.children.push(actorNode);
 			}
 		}
@@ -84,38 +170,23 @@ export class Parser {
 			const line = this.lines[i];
 
 			// Match function definitions: fun funcName or io fun funcName
-			const funMatch = line.match(/(?:io\s+)?fun\s+([a-zA-Z_][a-zA-Z0-9_]*)/);
+			const funMatch = extractFunctionNameWithOptionalIo(line);
 			if (funMatch) {
-				const blockEnd = this.findBlockEnd(i);
-				const funNode: ASTNode = {
-					kind: "function",
-					name: funMatch[1],
-					line: i,
-					startLine: i,
-					endLine: blockEnd,
-					children: [],
+				const funNode = this.processFunctionDefinition(
+					funMatch,
+					line,
+					i,
 					parent,
-				};
-				this.parseBlockContent(funNode, i + 1, blockEnd);
-				this.parseArguments(line, funNode, i);
-				i = blockEnd;
-
+				);
+				i = funNode.endLine;
 				parent.children.push(funNode);
 				continue;
 			}
 
 			// Match variable definitions: var varName or val varName
-			const varMatch = line.match(/\b(var|val)\s+([a-zA-Z_][a-zA-Z0-9_]*)/);
+			const varMatch = extractDeclarationKeywordAndName(line);
 			if (varMatch) {
-				const varNode: ASTNode = {
-					kind: "variable",
-					name: varMatch[2],
-					line: i,
-					startLine: i,
-					endLine: i,
-					children: [],
-					parent,
-				};
+				const varNode = this.processVariableDefinition(varMatch, i, parent);
 				parent.children.push(varNode);
 				continue;
 			}
@@ -149,14 +220,14 @@ export class Parser {
 		parentNode: ASTNode,
 		lineNumber: number,
 	): void {
-		const argumentsMatch = line.match(ARGUMENT_REGEX);
+		const argumentsMatch = line.match(
+			RegexPatterns.PARAMETER.ARGUMENT_NAME_IN_SIGNATURE,
+		);
 		if (argumentsMatch) {
-			const args = argumentsMatch[0].split(",");
-			args.forEach((arg) => {
-				const argName = arg.trim();
+			argumentsMatch.forEach((argName) => {
 				const argNode: ASTNode = {
 					kind: "variable",
-					name: argName,
+					name: argName.trim(),
 					line: lineNumber,
 					startLine: lineNumber,
 					endLine: lineNumber,
