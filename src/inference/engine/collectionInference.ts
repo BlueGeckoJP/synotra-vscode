@@ -127,7 +127,7 @@ export class CollectionInference {
 
 		// Find the start of arguments (after the method call pattern)
 		const fullMatch = line.match(RegexPatterns.METHOD.OBJECT_AND_METHOD_NAME);
-		if (!fullMatch?.index) {
+		if (!fullMatch || fullMatch.index === undefined) {
 			return null;
 		}
 
